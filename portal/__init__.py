@@ -1,16 +1,13 @@
 from flask import Flask
 from flask_wtf.csrf import CSRFProtect
 from datetime import timedelta
-import json
 
 # from flask import Markup
-from flask_misaka import markdown
 from flask_misaka import Misaka
 import logging.handlers
-import logging
 import sys
 
-__author__ = 'Jeremy Van <jeremyvan@uchicago.edu>'
+__author__ = "MANIAC Lab <gardnergroup@lists.uchicago.edu>"
 
 app = Flask(__name__)
 # Enable CSRF protection globally for Flask app
@@ -26,13 +23,24 @@ if len(sys.argv) > 1:
         print("Could not read config location from {}".format(sys.argv[1]))
 else:
     print("Reading config file from local directory")
-    app.config.from_pyfile('portal.conf')
+    app.config.from_pyfile("portal.conf")
 
 app.url_map.strict_slashes = False
 app.permanent_session_lifetime = timedelta(minutes=1440)
-app.config.update(SESSION_COOKIE_SECURE=True, SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax')
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+)
 # set up Markdown Rendering
 md = Misaka()
-md.__init__(app, tables=True, autolink=True, fenced_code=True, smartypants=True, quote=True, math=True, math_explicit=True)
-
-import portal.views
+md.__init__(
+    app,
+    tables=True,
+    autolink=True,
+    fenced_code=True,
+    smartypants=True,
+    quote=True,
+    math=True,
+    math_explicit=True,
+)
