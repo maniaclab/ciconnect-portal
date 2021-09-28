@@ -15,8 +15,8 @@
     <div class="row">
       <div class="col-lg-6 mx-auto">
         <h2>Edit Profile</h2>
-        <h6>Unix Username: {{session['unix_name']}}</h6>
-        <h6>User Globus ID: {{session['primary_identity']}}</h6>
+        <small id="unixName" class="text-muted">UNIX Username: {{session['unix_name']}}</small>
+        <br/><small id="globusID" class="text-muted">Globus ID: {{session['primary_identity']}}</small>
         <p class="asterik">* = required field</p>
         <hr/>
         <form role="form" action="{{url_for('edit_profile', unix_name=unix_name)}}" method="POST">
@@ -66,7 +66,7 @@
           </div>
 
           <div class="form-group">
-            <label for="email">Email <span class="asterik">*</span> (please use institutional email)</label>
+            <label for="email">Email <span class="asterik">*</span></label>
             <input
               type="email"
               id="email"
@@ -76,6 +76,7 @@
               required="required"
               tabindex="4"
             >
+            <small id="emailHelp" class="form-text text-muted">   Please use an institutional email address </small>
           </div>
 
           <div class="form-group">
@@ -90,6 +91,16 @@
               maxlength="512"
             >
           </div>
+
+	  <div class="form-check">
+	    <input type="checkbox" class="form-check-input" id="totpsecret" name="totpsecret">
+	    <label class="form-check-label" for="totpsecret">Set up Multi-Factor Authentication</label>
+            {% if profile['totp_secret'] %}
+            <small id="mfaHelp" class="form-text text-muted">This will <b>delete</b> your current MFA secret and generate a new one </small>
+            {% else %}
+            <small id="mfaHelp" class="form-text text-muted">Enabling MFA will add an additional layer of security for SSH connections </small>
+            {% endif %}
+	  </div></br>
 
           <div class="form-group">
             <label for="sshpubstring">SSH Public Key</label>
@@ -178,7 +189,6 @@
               </div>
             </div>
           </div>
-
         </div><!-- /.accordion-->
       </div><!-- /.col-md-6 -->
     </div> <!-- row -->

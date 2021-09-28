@@ -1,10 +1,11 @@
 from flask import flash, redirect, render_template, request, session, url_for, jsonify
+from flask_qrcode import QRcode
 import requests
 import json
 
 try:
     # Python 2
-    from urllib.parse import urlparse, urlencode, parse_qs
+    from urllib.parse import urlparse, urlencode, parse_qs, quote
 except ImportError:
     # Python 3
     from urlparse import urlparse, parse_qs
@@ -28,6 +29,9 @@ from portal.connect_api import (
     get_user_profile,
     get_user_group_status,
 )
+
+# enable QR code support
+QRcode(app)
 
 # Use these four lines on container
 import sys
@@ -143,6 +147,12 @@ def home():
             "img": "img/snowmass-connect-logo.png",
             "description": get_about_markdown("snowmass21.ci-connect.net"),
         },
+        {
+            "name": "Test",
+            "href": "https://www-test.ci-connect.net",
+            "img": "img/www-test-logo.png",
+            "description": get_about_markdown("www-test.ci-connect.net"),
+        },
     ]
 
     return render_template(
@@ -154,9 +164,13 @@ def home():
 
 
 def get_about_markdown(domain_name):
-    with open(brand_dir + "/" + domain_name + "/about/about.md", "r") as file:
-        about = file.read()
-    return about
+    try:
+        with open(brand_dir + "/" + domain_name + "/about/about.md", "r") as file:
+            about = file.read()
+        return about
+    except EnvironmentError as e:
+        print("Could not open markdown directories")
+        return "Empty or missing about.md - did you create the portal markdowns?"
 
 
 @app.route("/groups/new", methods=["GET", "POST"])
@@ -750,8 +764,9 @@ def create_profile():
         institution = request.form["institution"]
         public_key = request.form["sshpubstring"]
         globus_id = session["primary_identity"]
-        superuser = False
+        superuser = False  #  is this safe? TODO flagging this one
         service_account = False
+        create_totp_secret = True
 
         # Schema and query for adding users to CI Connect DB
         if public_key:
@@ -767,6 +782,7 @@ def create_profile():
                     "unix_name": unix_name,
                     "superuser": superuser,
                     "service_account": service_account,
+                    "create_totp_secret": create_totp_secret,
                 },
             }
         else:
@@ -781,6 +797,7 @@ def create_profile():
                     "unix_name": unix_name,
                     "superuser": superuser,
                     "service_account": service_account,
+                    "create_totp_secret": create_totp_secret,
                 },
             }
         r = requests.post(
@@ -861,6 +878,10 @@ def edit_profile(unix_name):
         public_key = request.form["sshpubstring"]
         globus_id = session["primary_identity"]
         x509dn = request.form["x509dn"]
+        if request.form.get("totpsecret") is not None:
+            create_totp_secret = True
+        else:
+            create_totp_secret = False
         access_token = get_user_access_token(session)
         query = {"token": access_token, "globus_id": identity_id}
         # Schema and query for adding users to CI Connect DB
@@ -874,6 +895,7 @@ def edit_profile(unix_name):
                     "institution": institution,
                     "public_key": public_key,
                     "X.509_DN": x509dn,
+                    "create_totp_secret": create_totp_secret,
                 },
             }
         else:
@@ -885,6 +907,7 @@ def edit_profile(unix_name):
                     "phone": phone,
                     "institution": institution,
                     "X.509_DN": x509dn,
+                    "totp_secret": create_totp_secret,
                 },
             }
         # PUT request to update user information
@@ -925,8 +948,23 @@ def profile():
             profile = None
 
         if profile:
-            print("Found profile: {}".format(profile))
-            profile = profile["metadata"]
+            profile = profile[
+                "metadata"
+            ]  # let's fix this, sometime. it's kinda unsavory.
+            # The auth string should never get used if the totp_secret key doesn't exist anyhow.
+            try:
+                issuer = quote(session["url_host"]["display_name"])
+                authenticator_string = (
+                    "otpauth://totp/"
+                    + unix_name
+                    + "?secret="
+                    + profile["totp_secret"]
+                    + "&issuer="
+                    + issuer
+                )
+            except KeyError as e:
+                print("Couldn't find a totp_secret in the profile for ", unix_name)
+                authenticator_string = None
             unix_name = profile["unix_name"]
             group_name = session["url_host"]["unix_name"]
             user_status = get_user_group_status(unix_name, group_name, session)
@@ -963,6 +1001,7 @@ def profile():
             user_status=user_status,
             group_memberships=group_memberships,
             group_unix_name_description=group_unix_name_description,
+            authenticator_string=authenticator_string,
         )
 
 
