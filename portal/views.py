@@ -766,6 +766,7 @@ def create_profile():
         globus_id = session["primary_identity"]
         superuser = False
         service_account = False
+        create_totp_secret = False
 
         if public_key:
             post_user = {
@@ -780,6 +781,7 @@ def create_profile():
                     "unix_name": unix_name,
                     "superuser": superuser,
                     "service_account": service_account,
+                    "create_totp_secret": create_totp_secret,
                 },
             }
         else:
@@ -877,7 +879,11 @@ def edit_profile(unix_name):
         x509dn = request.form["x509dn"]
         access_token = get_user_access_token(session)
         query = {"token": access_token, "globus_id": identity_id}
-        # Schema and query for adding users to CI Connect DB
+        if request.form.get("totpsecret") is not None:
+            create_totp_secret = True
+        else:
+            create_totp_secret = False
+ # Schema and query for adding users to CI Connect DB
         if public_key != " ":
             post_user = {
                 "apiVersion": "v1alpha1",
@@ -888,6 +894,7 @@ def edit_profile(unix_name):
                     "institution": institution,
                     "public_key": public_key,
                     "X.509_DN": x509dn,
+                    "create_totp_secret": create_totp_secret,
                 },
             }
         else:
@@ -899,6 +906,7 @@ def edit_profile(unix_name):
                     "phone": phone,
                     "institution": institution,
                     "X.509_DN": x509dn,
+                    "create_totp_secret": create_totp_secret,
                 },
             }
         # PUT request to update user information
@@ -941,6 +949,20 @@ def profile():
         if profile:
             # print("Found profile: {}".format(profile))
             profile = profile["metadata"]
+            # The auth string should never get used if the totp_secret key doesn't exist anyhow.
+            try:
+                issuer = "OSG Connect"
+                authenticator_string = (
+                    "otpauth://totp/"
+                    + unix_name
+                    + "?secret="
+                    + profile["totp_secret"]
+                    + "&issuer="
+                    + issuer
+                )
+            except KeyError as e:
+                print("Could not create an authenticator string: ", e)
+                authenticator_string = None
             unix_name = profile["unix_name"]
             group_name = session["url_host"]["unix_name"]
             user_status = get_user_group_status(unix_name, group_name, session)
@@ -977,6 +999,7 @@ def profile():
             user_status=user_status,
             group_memberships=group_memberships,
             group_unix_name_description=group_unix_name_description,
+            authenticator_string=authenticator_string
         )
 
 @app.route("/authcallback", methods=["GET"])
