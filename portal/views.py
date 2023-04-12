@@ -1,4 +1,5 @@
 from flask import flash, redirect, render_template, request, session, url_for, jsonify
+from flask_qrcode import QRcode
 import requests
 import json
 import os.path
@@ -29,6 +30,8 @@ from portal.connect_api import (
     get_user_profile,
     get_user_group_status,
 )
+
+QRcode(app)
 
 # Use these four lines on container
 import sys
