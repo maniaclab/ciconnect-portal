@@ -954,7 +954,7 @@ def profile():
             profile = profile["metadata"]
             # The auth string should never get used if the totp_secret key doesn't exist anyhow.
             try:
-                issuer = "OSG Connect"
+                issuer = "CI Connect"
                 authenticator_string = (
                     "otpauth://totp/"
                     + unix_name
