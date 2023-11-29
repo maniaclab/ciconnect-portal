@@ -327,7 +327,7 @@
     <li class="nav-item">
         <a class="nav-link" href="{{url_for('about')}}">About</a>
     </li>
-    {% if 'www.ci-connect.net' in request.host or 'duke.ci-connect.net' in request.host %}
+    {% if 'duke.ci-connect.net' in request.host %}
     {% else %}
     <li class="nav-item">
         <a class="nav-link" href="{{url_for('login')}}">Login</a>
