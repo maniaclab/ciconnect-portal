@@ -721,7 +721,7 @@ def logout():
         if token_info[ty] is not None
     ):
         client.oauth2_revoke_token(
-            token, additional_params={"token_type_hint": token_type}
+            token, query_params={"token_type_hint": token_type}
         )
 
     # Destroy the session state
@@ -1022,7 +1022,11 @@ def authcallback():
     redirect_uri = url_for("authcallback", _external=True)
 
     client = load_portal_client()
-    client.oauth2_start_flow(redirect_uri, refresh_tokens=True)
+    client.oauth2_start_flow(
+        redirect_uri, 
+        refresh_tokens=True, 
+        requested_scopes=app.config['USER_SCOPES']
+    )
 
     # If there's no "code" query string parameter, we're in this route
     # starting a Globus Auth login flow.
@@ -1034,7 +1038,7 @@ def authcallback():
         )
 
         auth_uri = client.oauth2_get_authorize_url(
-            additional_params=additional_authorize_params
+            query_params=additional_authorize_params
         )
         print("ADDITIONAL AUTHORIZED PARAMS: {}".format(additional_authorize_params))
         print("NEXT URL: {}".format(next_url))
@@ -1047,9 +1051,12 @@ def authcallback():
         next_url = get_safe_redirect()
         print("NEXT URL: {}".format(next_url))
         code = request.args.get("code")
+        print(f"Code: {code}")
         tokens = client.oauth2_exchange_code_for_tokens(code)
+        print(f"Tokens: {tokens}")
 
-        id_token = tokens.decode_id_token(client)
+        id_token = tokens.decode_id_token()
+        print(f"ID Token: {id_token}")
         session.update(
             tokens=tokens.by_resource_server,
             is_authenticated=True,
@@ -1061,9 +1068,11 @@ def authcallback():
         )
 
         access_token = session["tokens"]["auth.globus.org"]["access_token"]
+        print(f"Access token: {access_token}")
         token_introspect = client.oauth2_token_introspect(
             token=access_token, include="identity_set"
         )
+        print(f"Token introspect: {token_introspect}")
         identity_set = token_introspect.data["identity_set"]
         profile = None
 
