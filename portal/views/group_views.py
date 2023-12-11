@@ -58,6 +58,7 @@ def groups():
 
         domain_name = request.headers["Host"]
 
+        # TODO: Fix code duplication with views.py, utils.py, k8s_api.py, connect_api.py
         if "usatlas" in domain_name:
             domain_name = "atlas.ci-connect.net"
         elif "uscms" in domain_name:
@@ -66,6 +67,8 @@ def groups():
             domain_name = "psdconnect.uchicago.edu"
         elif "snowmass21" in domain_name:
             domain_name = "snowmass21.ci-connect.net"
+        else:
+            domain_name = "development"
 
         with open(
             brand_dir
