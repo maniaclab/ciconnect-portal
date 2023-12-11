@@ -55,6 +55,7 @@ import slate_views
 import k8s_views
 import admin_views
 
+
 @app.route("/webhooks/github", methods=["GET", "POST"])
 @csrf.exempt
 def webhooks():
@@ -98,13 +99,15 @@ def home():
         brand_dir + "/" + domain_name + "/home_content/home_text_rotating.md", "r"
     ) as file:
         home_text_rotating = file.read()
-    
+
     htd_file = brand_dir + "/" + domain_name + "/home_content/home_text_description.md"
     if os.path.isfile(htd_file):
         with open(htd_file, "r") as file:
-            home_text_description = file.read() 
+            home_text_description = file.read()
     else:
-        home_text_description = "CI Connect Portal, Efficiently connect your science to cycles and data"
+        home_text_description = (
+            "CI Connect Portal, Efficiently connect your science to cycles and data"
+        )
 
     collaborations = [
         {
@@ -538,7 +541,6 @@ def approve_subgroup(group_name, subgroup_name):
     access_token = get_user_access_token(session)
     query = {"token": access_token}
     if request.method == "GET":
-
         r = requests.put(
             ciconnect_api_endpoint
             + "/v1alpha1/groups/"
@@ -633,9 +635,11 @@ def aup():
         aup_md = file.read()
     return render_template("AUP.html", aup_md=aup_md)
 
+
 @app.route("/hardware", methods=["GET"])
 def hardware_information():
     return render_template("hardware.html")
+
 
 @app.route("/about", methods=["GET"])
 def about():
@@ -720,9 +724,7 @@ def logout():
         # only where the relevant token is actually present
         if token_info[ty] is not None
     ):
-        client.oauth2_revoke_token(
-            token, query_params={"token_type_hint": token_type}
-        )
+        client.oauth2_revoke_token(token, query_params={"token_type_hint": token_type})
 
     # Destroy the session state
     session.clear()
@@ -802,7 +804,9 @@ def create_profile():
                 },
             }
         try:
-            r = requests.post(ciconnect_api_endpoint + "/v1alpha1/users", params=query, json=post_user)
+            r = requests.post(
+                ciconnect_api_endpoint + "/v1alpha1/users", params=query, json=post_user
+            )
             if r.status_code == requests.codes.ok:
                 r = r.json()["metadata"]
                 session["name"] = r["name"]
@@ -845,9 +849,8 @@ def create_profile():
                 email=email,
                 phone=phone,
                 institution=institution,
-                public_key=public_key
+                public_key=public_key,
             )
-
 
 
 @app.route("/profile/edit/<unix_name>", methods=["GET", "POST"])
@@ -886,7 +889,7 @@ def edit_profile(unix_name):
             create_totp_secret = True
         else:
             create_totp_secret = False
- # Schema and query for adding users to CI Connect DB
+        # Schema and query for adding users to CI Connect DB
         if public_key != " ":
             post_user = {
                 "apiVersion": "v1alpha1",
@@ -1002,8 +1005,9 @@ def profile():
             user_status=user_status,
             group_memberships=group_memberships,
             group_unix_name_description=group_unix_name_description,
-            authenticator_string=authenticator_string
+            authenticator_string=authenticator_string,
         )
+
 
 @app.route("/authcallback", methods=["GET"])
 def authcallback():
@@ -1023,9 +1027,7 @@ def authcallback():
 
     client = load_portal_client()
     client.oauth2_start_flow(
-        redirect_uri, 
-        refresh_tokens=True, 
-        requested_scopes=app.config['USER_SCOPES']
+        redirect_uri, refresh_tokens=True, requested_scopes=app.config["USER_SCOPES"]
     )
 
     # If there's no "code" query string parameter, we're in this route
