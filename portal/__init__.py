@@ -8,6 +8,7 @@ import logging.handlers
 import sys
 
 from portal import app_logging
+
 logger = app_logging.init_logger()
 
 __author__ = "MANIAC Lab <gardnergroup@lists.uchicago.edu>"
@@ -32,6 +33,7 @@ else:
 print(app.config)
 if app.config["K8S_ENABLED"]:
     from portal import k8s_api
+
     k8s_api.load_kube_config()
     k8s_api.start_notebook_manager()
 
