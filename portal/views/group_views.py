@@ -491,7 +491,6 @@ def view_group_subgroups_ajax_requests(group_name):
     """List view of group's subgroups requests"""
     query = {"token": ciconnect_api_token}
     if request.method == "GET":
-
         subgroup_requests = requests.get(
             ciconnect_api_endpoint
             + "/v1alpha1/groups/"
@@ -547,7 +546,7 @@ def view_group_email(group_name):
             "psdconnect.uchicago.edu": "support@ci-connect.uchicago.edu",
             "www.ci-connect.net": "support@ci-connect.net",
             "localhost:5000": "root@localhost.localdomain",
-            "af.uchicago.edu": "noreply@af.uchicago.edu"
+            "af.uchicago.edu": "noreply@af.uchicago.edu",
         }
 
         try:
