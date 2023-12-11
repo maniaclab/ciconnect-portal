@@ -342,5 +342,7 @@ def domain_name_edgecase():
         domain_name = "psdconnect.uchicago.edu"
     elif "snowmass21" in domain_name:
         domain_name = "snowmass21.ci-connect.net"
+    else:
+        domain_name = "development"
 
     return domain_name

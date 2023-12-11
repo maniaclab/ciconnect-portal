@@ -3,8 +3,16 @@ import os
 from base64 import b64encode
 from portal import app
 
-slate_api_token = app.config["SLATE_API_TOKEN"]
-slate_api_endpoint = app.config["SLATE_API_ENDPOINT"]
+try:
+    slate_api_token = app.config["SLATE_API_TOKEN"]
+except:
+    slate_api_token = "dummy-token"
+
+try: 
+    slate_api_endpoint = app.config["SLATE_API_ENDPOINT"]
+except:
+    slate_api_endpoint = "http://localhost:8080"
+
 query = {"token": slate_api_token}
 
 # Install Jupyter

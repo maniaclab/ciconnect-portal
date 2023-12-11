@@ -18,8 +18,15 @@ import yaml
 from base64 import b64encode
 import random
 
-slate_api_token = app.config["SLATE_API_TOKEN"]
-slate_api_endpoint = app.config["SLATE_API_ENDPOINT"]
+try:
+    slate_api_token = app.config["SLATE_API_TOKEN"]
+except KeyError:
+    slate_api_token = "dummy" 
+
+try:
+    slate_api_endpoint = app.config["SLATE_API_ENDPOINT"]
+except KeyError:
+    slate_api_endpoint = "http://localhost:8000"
 query = {"token": slate_api_token}
 
 def generateToken():
