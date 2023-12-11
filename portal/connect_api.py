@@ -301,7 +301,6 @@ def list_connect_admins(group_name):
 
 
 def get_user_profile(unix_name):
-
     identity_id = session.get("primary_identity")
 
     query = {"token": ciconnect_api_token, "globus_id": identity_id}

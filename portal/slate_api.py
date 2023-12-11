@@ -8,7 +8,7 @@ try:
 except:
     slate_api_token = "dummy-token"
 
-try: 
+try:
     slate_api_endpoint = app.config["SLATE_API_ENDPOINT"]
 except:
     slate_api_endpoint = "http://localhost:8080"
@@ -75,7 +75,6 @@ def create_application():
 
 #  Users
 def get_user_info(session):
-
     query = {"token": slate_api_token, "globus_id": session["primary_identity"]}
 
     profile = requests.get(slate_api_endpoint + "/v1alpha3/find_user", params=query)
@@ -87,7 +86,6 @@ def get_user_info(session):
 
 
 def get_user_id(session):
-
     query = {"token": slate_api_token, "globus_id": session["primary_identity"]}
 
     profile = requests.get(slate_api_endpoint + "/v1alpha3/find_user", params=query)
@@ -98,7 +96,6 @@ def get_user_id(session):
 
 
 def get_user_access_token(session):
-
     query = {"token": slate_api_token, "globus_id": session["primary_identity"]}
 
     profile = requests.get(slate_api_endpoint + "/v1alpha3/find_user", params=query)
