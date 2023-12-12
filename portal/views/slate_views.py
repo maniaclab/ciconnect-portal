@@ -30,7 +30,7 @@ except KeyError:
 query = {"token": slate_api_token}
 
 
-def generateToken():
+def generate_token():
     token_bytes = os.urandom(32)
     b64_encoded = b64encode(token_bytes).decode()
     return b64_encoded
@@ -187,7 +187,7 @@ def create_application():
 
         # Generate base64 encoded random 32-bytes token
         logger.info("Generating a token")
-        base64_encoded_token = generateToken()
+        base64_encoded_token = generate_token()
         app_config_yaml["Jupyter"]["Token"] = base64_encoded_token
 
         logger.info("Setting resource values in the YAML file")

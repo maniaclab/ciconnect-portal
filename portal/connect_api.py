@@ -20,8 +20,7 @@ def connect_name(group_name):
     :param group_name: unix string name of group
     :return: string of connect name
     """
-    connect_name = ".".join(group_name.split(".")[:2])
-    return connect_name
+    return ".".join(group_name.split(".")[:2])
 
 
 def query_status_code(query_response):
@@ -32,14 +31,14 @@ def query_status_code(query_response):
     return query_return
 
 
-def get_multiplex(json):
+def get_multiplex(json_obj):
     """
     Returns list of objects, containing multiplex information
-    :param json: json object containing query and request methods
+    :param json_obj: json object containing query and request methods
     :return: [{state, name, state_set_by}]
     """
     multiplex = requests.post(
-        ciconnect_api_endpoint + "/v1alpha1/multiplex", params=query, json=json
+        ciconnect_api_endpoint + "/v1alpha1/multiplex", params=query, json=json_obj
     )
     multiplex = multiplex.json()
     return multiplex

@@ -1,11 +1,11 @@
+import sys
+import logging.handlers
 from flask import Flask
 from flask_wtf.csrf import CSRFProtect
 from datetime import timedelta
 
 # from flask import Markup
 from flask_misaka import Misaka
-import logging.handlers
-import sys
 
 from portal import app_logging
 
@@ -25,7 +25,7 @@ if len(sys.argv) > 1:
         app.config.from_pyfile(config_file)
         logger.info("Read config file from sys.argv[1]")
     except:
-        logger.error("Could not read config location from {}".format(sys.argv[1]))
+        logger.error(f"Could not read config location from {sys.argv[1]}")
 else:
     app.config.from_pyfile("portal.conf")
     logger.info("Read config file from portal.conf")

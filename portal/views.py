@@ -1,8 +1,13 @@
-from flask import flash, redirect, render_template, request, session, url_for, jsonify
-from flask_qrcode import QRcode
-import requests
+import sys
+import subprocess
+import os
+import signal
 import json
-import os.path
+import requests
+from flask import flash, redirect, render_template, request, session, url_for
+from flask_qrcode import QRcode
+
+MAX_TIMEOUT = 10  # s
 
 try:
     # Python 2
@@ -32,12 +37,6 @@ from portal.connect_api import (
 )
 
 QRcode(app)
-
-# Use these four lines on container
-import sys
-import subprocess
-import os
-import signal
 
 # Read configurable tokens and endpoints from config file, values must be set
 ciconnect_api_token = app.config["CONNECT_API_TOKEN"]
@@ -172,7 +171,7 @@ def home():
 def get_about_markdown(domain_name):
     with open(brand_dir + "/" + domain_name + "/about/about.md", "r") as file:
         about = file.read()
-    return about
+        return about
 
 
 @app.route("/groups/new", methods=["GET", "POST"])
@@ -394,20 +393,14 @@ def create_subgroup(group_name):
                 return redirect(
                     url_for("view_group", group_name=full_created_group_name)
                 )
-            else:
-                flash(
-                    "The support team has been notified of your requested subgroup.",
-                    "success",
-                )
-                return redirect(url_for("users_groups_pending"))
-        else:
-            err_message = r.json()["message"]
             flash(
-                "Failed to request project creation: {}".format(err_message), "warning"
+                "The support team has been notified of your requested subgroup.",
+                "success",
             )
-            return redirect(
-                url_for("view_group_subgroups_requests", group_name=group_name)
-            )
+            return redirect(url_for("users_groups_pending"))
+        err_message = r.json()["message"]
+        flash("Failed to request project creation: {}".format(err_message), "warning")
+        return redirect(url_for("view_group_subgroups_requests", group_name=group_name))
 
 
 @app.route("/groups/<group_name>/requests/edit", methods=["GET", "POST"])
@@ -572,32 +565,26 @@ def approve_subgroup(group_name, subgroup_name):
 def deny_subgroup(group_name, subgroup_name):
     access_token = get_user_access_token(session)
     query = {"token": access_token}
-    if request.method == "POST":
-        message = request.form["denial-message"]
-        denial_message = {"message": message}
+    message = request.form["denial-message"]
+    denial_message = {"message": message}
 
-        r = requests.delete(
-            ciconnect_api_endpoint
-            + "/v1alpha1/groups/"
-            + group_name
-            + "/subgroup_requests/"
-            + subgroup_name,
-            params=query,
-            json=denial_message,
-        )
+    r = requests.delete(
+        ciconnect_api_endpoint
+        + "/v1alpha1/groups/"
+        + group_name
+        + "/subgroup_requests/"
+        + subgroup_name,
+        params=query,
+        json=denial_message,
+    )
 
-        if r.status_code == requests.codes.ok:
-            flash_message = flash_message_parser("deny_subgroup")
-            flash(flash_message, "success")
-            return redirect(
-                url_for("view_group_subgroups_requests", group_name=group_name)
-            )
-        else:
-            err_message = r.json()["message"]
-            flash("Failed to deny subgroup request: {}".format(err_message), "warning")
-            return redirect(
-                url_for("view_group_subgroups_requests", group_name=group_name)
-            )
+    if r.status_code == requests.codes.ok:
+        flash_message = flash_message_parser("deny_subgroup")
+        flash(flash_message, "success")
+        return redirect(url_for("view_group_subgroups_requests", group_name=group_name))
+    err_message = r.json()["message"]
+    flash("Failed to deny subgroup request: {}".format(err_message), "warning")
+    return redirect(url_for("view_group_subgroups_requests", group_name=group_name))
 
 
 @app.route("/signup", methods=["GET"])
@@ -606,14 +593,22 @@ def signup():
     domain_name = domain_name_edgecase()
 
     with open(
-        brand_dir + "/" + domain_name + "/signup_content/signup_modal.md", "r"
+        brand_dir + "/" + domain_name + "/signup_content/signup_modal.md",
+        "r",
+        encoding="utf-8",
     ) as file:
         signup_modal_md = file.read()
     with open(
-        brand_dir + "/" + domain_name + "/signup_content/signup_instructions.md", "r"
+        brand_dir + "/" + domain_name + "/signup_content/signup_instructions.md",
+        "r",
+        encoding="utf-8",
     ) as file:
         signup_instructions_md = file.read()
-    with open(brand_dir + "/" + domain_name + "/signup_content/signup.md", "r") as file:
+    with open(
+        brand_dir + "/" + domain_name + "/signup_content/signup.md",
+        "r",
+        encoding="utf-8",
+    ) as file:
         signup_md = file.read()
     return render_template(
         "signup.html",
@@ -944,7 +939,6 @@ def edit_profile(unix_name):
 def profile():
     """User profile information. Assocated with a Globus Auth identity."""
     if request.method == "GET":
-        identity_id = session.get("primary_identity")
         try:
             user = get_user_info(session)
             unix_name = user["metadata"]["unix_name"]
@@ -996,6 +990,7 @@ def profile():
             + domain_name
             + "/form_descriptions/group_unix_name_description.md",
             "r",
+            encoding="utf-8",
         ) as file:
             group_unix_name_description = file.read()
 
@@ -1185,8 +1180,7 @@ def authcallback():
         # print("FINAL NEXT URL: {}".format(next_url))
         if next_url == "/":
             return redirect(url_for("profile"))
-        else:
-            return redirect(next_url)
+        return redirect(next_url)
 
 
 def admin_check(unix_name):
@@ -1204,6 +1198,7 @@ def admin_check(unix_name):
         + "/groups/"
         + session["url_host"]["unix_name"],
         params=query,
+        timeout=MAX_TIMEOUT,
     )
     user_status = r.json()["membership"]["state"]
     return user_status

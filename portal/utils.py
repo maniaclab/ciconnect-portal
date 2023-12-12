@@ -1,12 +1,12 @@
-from flask import request
 from threading import Lock
+from flask import request
 
 import globus_sdk
 
 try:
     import ConfigParser as configparser
-except:
-    import configparser as configparser
+except ModuleNotFoundError:
+    import configparser
 
 try:
     from urllib.parse import urlparse, urljoin

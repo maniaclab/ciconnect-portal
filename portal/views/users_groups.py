@@ -39,7 +39,7 @@ def users_groups():
         # Get user's group membership info based on session unix name
         users_group_memberships = get_user_group_memberships(session, unix_name)
 
-        multiplexJson = {}
+        multiplex_json = {}
         group_membership_status = {}
         for group in users_group_memberships:
             if group["state"] not in ["nonmember"]:
@@ -47,10 +47,10 @@ def users_groups():
                 group_query = (
                     "/v1alpha1/groups/" + group_name + "?token=" + query["token"]
                 )
-                multiplexJson[group_query] = {"method": "GET"}
+                multiplex_json[group_query] = {"method": "GET"}
                 group_membership_status[group_query] = group["state"]
         # POST request for multiplex return
-        multiplex = get_multiplex(multiplexJson)
+        multiplex = get_multiplex(multiplex_json)
 
         users_groups = []
         for group in multiplex:

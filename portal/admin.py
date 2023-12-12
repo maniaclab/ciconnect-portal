@@ -1,12 +1,11 @@
-import requests
 import json
-from matplotlib.figure import Figure
-from io import BytesIO
 import base64
-from flask import session
-from dateutil.parser import parse
+from io import BytesIO
 from datetime import datetime
-from datetime import timedelta
+import requests
+from dateutil.parser import parse
+from flask import session
+from matplotlib.figure import Figure
 from portal import logger
 from portal import app
 
@@ -14,6 +13,7 @@ ciconnect_api_token = app.config["CONNECT_API_TOKEN"]
 ciconnect_api_endpoint = app.config["CONNECT_API_ENDPOINT"]
 mailgun_api_token = app.config["MAILGUN_API_TOKEN"]
 params = {"token": ciconnect_api_token}
+MAX_TIMEOUT = 10  # seconds
 
 
 def authorized():
@@ -30,13 +30,14 @@ def get_usernames(group):
                 + "/members?token="
                 + ciconnect_api_token
             )
-            users = requests.get(url).json()
+            users = requests.get(url, timeout=MAX_TIMEOUT).json()
             return [member["user_name"] for member in users["memberships"]]
-        except:
-            logger.error("Error getting usernames")
+        except requests.exceptions.RequestException as e:
+            logger.error("Error getting usernames: %s", e)
 
 
 def get_user_profiles(group):
+    profiles = []
     if authorized():
         try:
             usernames = get_usernames(group)
@@ -48,10 +49,11 @@ def get_user_profiles(group):
                 ] = {"method": "GET"}
 
             url = ciconnect_api_endpoint + "/v1alpha1/multiplex"
-            resp = requests.post(url, params=params, json=multiplex_json)
+            resp = requests.post(
+                url, params=params, json=multiplex_json, timeout=MAX_TIMEOUT
+            )
             data = resp.json()
 
-            profiles = []
             for entry in data:
                 user = json.loads(data[entry]["body"])
                 username = user["metadata"]["unix_name"]
@@ -68,18 +70,18 @@ def get_user_profiles(group):
                         "name": name,
                     }
                 )
-            return profiles
-        except:
-            logger.error("Error getting user profiles")
+        except requests.exceptions.RequestException as e:
+            logger.error("Error getting user profiles: %s", e)
+    return profiles
 
 
 def get_email_list(group):
+    email_list = []
     if authorized():
-        email_list = []
         profiles = get_user_profiles(group)
         for profile in profiles:
             email_list.append(profile["email"])
-        return email_list
+    return email_list
 
 
 def update_user_institution(username, institution):
@@ -91,13 +93,11 @@ def update_user_institution(username, institution):
                 "metadata": {"institution": institution},
             }
             url = ciconnect_api_endpoint + "/v1alpha1/users/" + username
-            resp = requests.put(url, params=params, json=json_data)
-            logger.info(
-                "Updated user %s. Set institution to %s." % (username, institution)
-            )
+            resp = requests.put(url, params=params, json=json_data, timeout=MAX_TIMEOUT)
+            logger.info("Updated user %s. Set institution to %s", username, institution)
             return resp
-        except Exception as err:
-            logger.error("Error updating institution for user %s." % username)
+        except requests.exceptions.RequestException as e:
+            logger.error("Error updating institution for user %s: %s", username, e)
 
 
 def email_users(sender, recipients, subject, body):
@@ -114,10 +114,11 @@ def email_users(sender, recipients, subject, body):
                     "subject": subject,
                     "text": body,
                 },
+                timeout=MAX_TIMEOUT,
             )
             return resp
-        except:
-            logger.error("Error sending email to all users")
+        except requests.exceptions.RequestException as e:
+            logger.error("Error sending email to all users: %s", e)
 
 
 def plot_users_by_join_date(users):
@@ -137,7 +138,7 @@ def plot_users_by_join_date(users):
             yvalues = [0] * len(xvalues)
             for i in range(len(xvalues)):
                 xvalue = datetime.strptime(xvalues[i], xvalues_format)
-                L = list(
+                l = list(
                     filter(
                         lambda u: ((xvalue.year - u["jd"].year) * 12)
                         + (xvalue.month - u["jd"].month)
@@ -145,7 +146,7 @@ def plot_users_by_join_date(users):
                         users,
                     )
                 )
-                yvalues[i] = len(L)
+                yvalues[i] = len(l)
             fig = Figure(figsize=(16, 8), dpi=80, tight_layout=True)
             ax = fig.subplots()
             ax.plot(xvalues, yvalues)
