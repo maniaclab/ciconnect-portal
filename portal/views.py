@@ -719,7 +719,7 @@ def logout():
         # only where the relevant token is actually present
         if token_info[ty] is not None
     ):
-        client.oauth2_revoke_token(token, query_params={"token_type_hint": token_type})
+        client.oauth2_revoke_token(token)
 
     # Destroy the session state
     session.clear()
