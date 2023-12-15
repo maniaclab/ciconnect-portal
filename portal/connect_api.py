@@ -1,17 +1,30 @@
-from flask import session, request
-from portal import app
-import requests
 import json
+import requests
+from flask import session, request
+from portal import logger
+from portal import app
 
 # Read configurable tokens and endpoints from config file, values must be set
-ciconnect_api_token = app.config["CONNECT_API_TOKEN"]
-ciconnect_api_endpoint = app.config["CONNECT_API_ENDPOINT"]
+if "CONNECT_API_TOKEN" in app.config:
+    CICONNECT_API_TOKEN = app.config["CONNECT_API_TOKEN"]
+else:
+    CICONNECT_API_TOKEN = "dummy-token"
+
+if "CONNECT_API_ENDPOINT" in app.config:
+    CICONNECT_API_ENDPOINT = app.config["CONNECT_API_ENDPOINT"]
+else:
+    CICONNECT_API_ENDPOINT = "localhost:18080"
+
+if "REQUEST_MAX_TIMEOUT" in app.config:
+    REQUEST_TIMEOUT = app.config["REQUEST_MAX_TIMEOUT"]
+else:
+    REQUEST_TIMEOUT = 10  # 10s
 
 try:
     user_access_token = get_user_access_token(session)
     query = {"token": user_access_token}
 except:
-    query = {"token": ciconnect_api_token}
+    query = {"token": CICONNECT_API_TOKEN}
 
 
 def connect_name(group_name):
@@ -37,10 +50,17 @@ def get_multiplex(json_obj):
     :param json_obj: json object containing query and request methods
     :return: [{state, name, state_set_by}]
     """
-    multiplex = requests.post(
-        ciconnect_api_endpoint + "/v1alpha1/multiplex", params=query, json=json_obj
-    )
-    multiplex = multiplex.json()
+    multiplex = {}
+    try:
+        multiplex = requests.post(
+            CICONNECT_API_ENDPOINT + "/v1alpha1/multiplex",
+            params=query,
+            json=json_obj,
+            timeout=REQUEST_TIMEOUT,
+        )
+        multiplex = multiplex.json()
+    except requests.exceptions.RequestException as e:
+        logger.error("Did not get a valid response from the multiplex endpoint %s", e)
     return multiplex
 
 
@@ -55,9 +75,13 @@ def get_user_info(session):
     :param session: user session to pull primary_identity
     :return: object {kind: User, apiVersion: v1alpha1, metadata: {access_token, unix_name}}
     """
-    query = {"token": ciconnect_api_token, "globus_id": session["primary_identity"]}
+    query = {"token": CICONNECT_API_TOKEN, "globus_id": session["primary_identity"]}
 
-    user = requests.get(ciconnect_api_endpoint + "/v1alpha1/find_user", params=query)
+    user = requests.get(
+        CICONNECT_API_ENDPOINT + "/v1alpha1/find_user",
+        params=query,
+        timeout=REQUEST_TIMEOUT,
+    )
     user = user.json()
     return user
 
@@ -68,11 +92,12 @@ def get_user_group_memberships(session, unix_name):
     :param session: user session to pull primary_identity
     :return: {query: {status: response, body: { apiVersion, kind, metadata: {} } }}
     """
-    query = {"token": ciconnect_api_token, "globus_id": session["primary_identity"]}
+    query = {"token": CICONNECT_API_TOKEN, "globus_id": session["primary_identity"]}
 
     users_group_memberships = requests.get(
-        ciconnect_api_endpoint + "/v1alpha1/users/" + unix_name + "/groups",
+        CICONNECT_API_ENDPOINT + "/v1alpha1/users/" + unix_name + "/groups",
         params=query,
+        timeout=REQUEST_TIMEOUT,
     )
     users_group_memberships = users_group_memberships.json()["group_memberships"]
     return users_group_memberships
@@ -86,15 +111,16 @@ def get_user_group_status(unix_name, group_name, session):
     :param session: user session to pull primary_identity
     :return: string
     """
-    query = {"token": ciconnect_api_token, "globus_id": session["primary_identity"]}
+    query = {"token": CICONNECT_API_TOKEN, "globus_id": session["primary_identity"]}
 
     user_status = requests.get(
-        ciconnect_api_endpoint
+        CICONNECT_API_ENDPOINT
         + "/v1alpha1/groups/"
         + group_name
         + "/members/"
         + unix_name,
         params=query,
+        timeout=REQUEST_TIMEOUT,
     )
     user_status = user_status.json()["membership"]["state"]
 
@@ -108,10 +134,11 @@ def get_user_pending_project_requests(unix_name):
     :param connect_group: string name of connect group
     :return: string (active, admin, nonmember)
     """
-    query = {"token": ciconnect_api_token}
+    query = {"token": CICONNECT_API_TOKEN}
     pending_project_requests = requests.get(
-        ciconnect_api_endpoint + "/v1alpha1/users/" + unix_name + "/group_requests",
+        CICONNECT_API_ENDPOINT + "/v1alpha1/users/" + unix_name + "/group_requests",
         params=query,
+        timeout=REQUEST_TIMEOUT,
     )
     pending_project_requests = pending_project_requests.json()["groups"]
     return pending_project_requests
@@ -125,12 +152,13 @@ def get_user_connect_status(unix_name, connect_group):
     :return: string (active, admin, nonmember)
     """
     connect_status = requests.get(
-        ciconnect_api_endpoint
+        CICONNECT_API_ENDPOINT
         + "/v1alpha1/users/"
         + unix_name
         + "/groups/"
         + connect_group,
         params=query,
+        timeout=REQUEST_TIMEOUT,
     )
     connect_status = connect_status.json()["membership"]["state"]
     return connect_status
@@ -173,7 +201,9 @@ def get_group_info(group_name, session):
     access_token = get_user_access_token(session)
     query = {"token": access_token}
     group_info = requests.get(
-        ciconnect_api_endpoint + "/v1alpha1/groups/" + group_name, params=query
+        CICONNECT_API_ENDPOINT + "/v1alpha1/groups/" + group_name,
+        params=query,
+        timeout=REQUEST_TIMEOUT,
     )
     group_info = group_info.json()["metadata"]
     return group_info
@@ -183,15 +213,16 @@ def get_group_members(group_name, session):
     access_token = get_user_access_token(session)
     query = {"token": access_token}
     group_members = requests.get(
-        ciconnect_api_endpoint + "/v1alpha1/groups/" + group_name + "/members",
+        CICONNECT_API_ENDPOINT + "/v1alpha1/groups/" + group_name + "/members",
         params=query,
+        timeout=REQUEST_TIMEOUT,
     )
     group_members = group_members.json()["memberships"]
     return group_members
 
 
 def get_group_members_emails(group_name):
-    query = {"token": ciconnect_api_token}
+    query = {"token": CICONNECT_API_TOKEN}
 
     group_members = get_group_members(group_name, session)
     multiplexJson = {}
@@ -232,7 +263,9 @@ def delete_group_entry(group_name, session):
     query = {"token": access_token}
 
     r = requests.delete(
-        ciconnect_api_endpoint + "/v1alpha1/groups/" + group_name, params=query
+        CICONNECT_API_ENDPOINT + "/v1alpha1/groups/" + group_name,
+        params=query,
+        timeout=REQUEST_TIMEOUT,
     )
     return r
 
@@ -248,8 +281,9 @@ def get_subgroups(group_name, session):
     query = {"token": access_token}
 
     subgroups = requests.get(
-        ciconnect_api_endpoint + "/v1alpha1/groups/" + group_name + "/subgroups",
+        CICONNECT_API_ENDPOINT + "/v1alpha1/groups/" + group_name + "/subgroups",
         params=query,
+        timeout=REQUEST_TIMEOUT,
     )
     subgroups = subgroups.json()["groups"]
 
@@ -269,13 +303,14 @@ def update_user_group_status(group_name, unix_name, status, session):
 
     put_query = {"apiVersion": "v1alpha1", "group_membership": {"state": status}}
     user_status = requests.put(
-        ciconnect_api_endpoint
+        CICONNECT_API_ENDPOINT
         + "/v1alpha1/groups/"
         + group_name
         + "/members/"
         + unix_name,
         params=query,
         json=put_query,
+        timeout=REQUEST_TIMEOUT,
     )
     return user_status
 
@@ -285,64 +320,54 @@ def list_connect_admins(group_name):
     Return list of admins of connect group
     Return list of nested dictionaries with state, user_name, and state_set_by
     """
-    query = {"token": ciconnect_api_token}
-    group_members = requests.get(
-        ciconnect_api_endpoint
-        + "/v1alpha1/groups/"
-        + connect_name(group_name)
-        + "/members",
-        params=query,
-    )
-    memberships = group_members.json()["memberships"]
-    memberships = [member for member in memberships if member["state"] == "admin"]
-
+    memberships = []
+    query = {"token": CICONNECT_API_TOKEN}
+    try:
+        group_members = requests.get(
+            CICONNECT_API_ENDPOINT
+            + "/v1alpha1/groups/"
+            + connect_name(group_name)
+            + "/members",
+            params=query,
+            timeout=REQUEST_TIMEOUT,
+        )
+        memberships = group_members.json()["memberships"]
+        memberships = [member for member in memberships if member["state"] == "admin"]
+    except requests.exceptions.RequestException as e:
+        logger: error("Could not get memberships for %s. Error: %s", group_name, e)
     return memberships
 
 
 def get_user_profile(unix_name):
+    profile = None
     identity_id = session.get("primary_identity")
-
-    query = {"token": ciconnect_api_token, "globus_id": identity_id}
-
+    query = {"token": CICONNECT_API_TOKEN, "globus_id": identity_id}
     profile = requests.get(
-        ciconnect_api_endpoint + "/v1alpha1/users/" + unix_name, params=query
+        CICONNECT_API_ENDPOINT + "/v1alpha1/users/" + unix_name,
+        params=query,
+        timeout=REQUEST_TIMEOUT,
     )
-
     if profile.status_code == requests.codes.ok:
         profile = profile.json()
-        return profile
     else:
-        err_message = profile.json()["message"]
-        print(err_message)
-        return None
+        err_msg = profile.json()["message"]
+        logger.error("Error getting user profile: %s", err_msg)
+    return profile
 
 
 def get_user_access_token(session):
+    access_token = None
     user = get_user_info(session)
     if user:
         access_token = user["metadata"]["access_token"]
-    else:
-        access_token = None
     return access_token
 
 
-def domain_name_edgecase():
-    """"""
+def domain_branding_remap():
     domain_name = request.headers["Host"]
-
-    if "usatlas" in domain_name:
-        domain_name = "atlas.ci-connect.net"
-    elif "uscms" in domain_name:
-        domain_name = "cms.ci-connect.net"
-    elif "af" in domain_name:
-        domain_name = "af.uchicago.edu"
-    elif "uchicago" in domain_name:
-        domain_name = "psdconnect.uchicago.edu"
-    elif "snowmass21" in domain_name:
-        domain_name = "snowmass21.ci-connect.net"
-    elif "www" in domain_name:
-        domain_name = "www.ci-connect.net"
-    else:
-        domain_name = "development"
-
-    return domain_name
+    try:
+        mapped_domain = app.config["DOMAIN_MAP"][domain_name]
+    except KeyError:
+        logger.warning("Could not map %s to domain from config", domain_name)
+        mapped_domain = "development"
+    return mapped_domain

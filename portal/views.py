@@ -31,7 +31,7 @@ from portal.connect_api import (
     delete_group_entry,
     update_user_group_status,
     get_user_access_token,
-    domain_name_edgecase,
+    domain_branding_remap,
     get_user_profile,
     get_user_group_status,
 )
@@ -88,7 +88,7 @@ def webhooks():
 @app.route("/", methods=["GET"])
 def home():
     """Home page - play with it if you must!"""
-    domain_name = domain_name_edgecase()
+    domain_name = domain_branding_remap()
 
     with open(
         brand_dir + "/" + domain_name + "/home_content/home_text_headline.md", "r"
@@ -590,7 +590,7 @@ def deny_subgroup(group_name, subgroup_name):
 @app.route("/signup", methods=["GET"])
 def signup():
     """Send the user to Globus Auth with signup=1."""
-    domain_name = domain_name_edgecase()
+    domain_name = domain_branding_remap()
 
     with open(
         brand_dir + "/" + domain_name + "/signup_content/signup_modal.md",
@@ -622,7 +622,7 @@ def signup():
 def aup():
     """Send the user to Acceptable Use Policy page"""
     # Read AUP from markdown dir
-    domain_name = domain_name_edgecase()
+    domain_name = domain_branding_remap()
 
     with open(
         brand_dir + "/" + domain_name + "/signup_content/signup_modal.md", "r"
@@ -640,7 +640,7 @@ def hardware_information():
 def about():
     """Send the user to the About page"""
     # Read About from markdown dir
-    domain_name = domain_name_edgecase()
+    domain_name = domain_branding_remap()
 
     with open(brand_dir + "/" + domain_name + "/about/about.md", "r") as file:
         about = file.read()
@@ -982,7 +982,7 @@ def profile():
             ):
                 group_memberships.append(group)
 
-        domain_name = domain_name_edgecase()
+        domain_name = domain_branding_remap()
 
         with open(
             brand_dir

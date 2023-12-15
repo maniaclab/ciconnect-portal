@@ -14,13 +14,13 @@ except ImportError:
     from urlparse import urlparse, urljoin
 
 from portal import app
-from portal.connect_api import domain_name_edgecase
+from portal.connect_api import domain_branding_remap
 
 brand_dir = app.config["MARKDOWN_DIR"]
 
 
 def flash_message_parser(route_name):
-    domain_name = domain_name_edgecase()
+    domain_name = domain_branding_remap()
     config = configparser.RawConfigParser(allow_no_value=True)
     config.read(brand_dir + "/" + domain_name + "/flash_messages/flash_messages.cfg")
     flash_message = config.get("flash_messages", route_name)

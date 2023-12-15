@@ -14,7 +14,7 @@ from portal.connect_api import (
     get_user_info,
     get_user_group_memberships,
     get_user_pending_project_requests,
-    domain_name_edgecase,
+    domain_branding_remap,
 )
 import sys
 
@@ -79,7 +79,7 @@ def users_groups():
         connect_group = session["url_host"]["unix_name"]
         user_status = get_user_connect_status(unix_name, connect_group)
 
-        domain_name = domain_name_edgecase()
+        domain_name = domain_branding_remap()
 
         with open(
             brand_dir
