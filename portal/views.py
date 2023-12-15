@@ -1,8 +1,13 @@
-from flask import flash, redirect, render_template, request, session, url_for, jsonify
-from flask_qrcode import QRcode
-import requests
+import sys
+import subprocess
+import os
+import signal
 import json
-import os.path
+import requests
+from flask import flash, redirect, render_template, request, session, url_for
+from flask_qrcode import QRcode
+
+MAX_TIMEOUT = 10  # s
 
 try:
     # Python 2
@@ -26,18 +31,12 @@ from portal.connect_api import (
     delete_group_entry,
     update_user_group_status,
     get_user_access_token,
-    domain_name_edgecase,
+    domain_branding_remap,
     get_user_profile,
     get_user_group_status,
 )
 
 QRcode(app)
-
-# Use these four lines on container
-import sys
-import subprocess
-import os
-import signal
 
 # Read configurable tokens and endpoints from config file, values must be set
 ciconnect_api_token = app.config["CONNECT_API_TOKEN"]
@@ -54,6 +53,7 @@ import users_groups
 import slate_views
 import k8s_views
 import admin_views
+
 
 @app.route("/webhooks/github", methods=["GET", "POST"])
 @csrf.exempt
@@ -88,7 +88,7 @@ def webhooks():
 @app.route("/", methods=["GET"])
 def home():
     """Home page - play with it if you must!"""
-    domain_name = domain_name_edgecase()
+    domain_name = domain_branding_remap()
 
     with open(
         brand_dir + "/" + domain_name + "/home_content/home_text_headline.md", "r"
@@ -98,13 +98,15 @@ def home():
         brand_dir + "/" + domain_name + "/home_content/home_text_rotating.md", "r"
     ) as file:
         home_text_rotating = file.read()
-    
+
     htd_file = brand_dir + "/" + domain_name + "/home_content/home_text_description.md"
     if os.path.isfile(htd_file):
         with open(htd_file, "r") as file:
-            home_text_description = file.read() 
+            home_text_description = file.read()
     else:
-        home_text_description = "CI Connect Portal, Efficiently connect your science to cycles and data"
+        home_text_description = (
+            "CI Connect Portal, Efficiently connect your science to cycles and data"
+        )
 
     collaborations = [
         {
@@ -169,7 +171,7 @@ def home():
 def get_about_markdown(domain_name):
     with open(brand_dir + "/" + domain_name + "/about/about.md", "r") as file:
         about = file.read()
-    return about
+        return about
 
 
 @app.route("/groups/new", methods=["GET", "POST"])
@@ -391,20 +393,14 @@ def create_subgroup(group_name):
                 return redirect(
                     url_for("view_group", group_name=full_created_group_name)
                 )
-            else:
-                flash(
-                    "The support team has been notified of your requested subgroup.",
-                    "success",
-                )
-                return redirect(url_for("users_groups_pending"))
-        else:
-            err_message = r.json()["message"]
             flash(
-                "Failed to request project creation: {}".format(err_message), "warning"
+                "The support team has been notified of your requested subgroup.",
+                "success",
             )
-            return redirect(
-                url_for("view_group_subgroups_requests", group_name=group_name)
-            )
+            return redirect(url_for("users_groups_pending"))
+        err_message = r.json()["message"]
+        flash("Failed to request project creation: {}".format(err_message), "warning")
+        return redirect(url_for("view_group_subgroups_requests", group_name=group_name))
 
 
 @app.route("/groups/<group_name>/requests/edit", methods=["GET", "POST"])
@@ -538,7 +534,6 @@ def approve_subgroup(group_name, subgroup_name):
     access_token = get_user_access_token(session)
     query = {"token": access_token}
     if request.method == "GET":
-
         r = requests.put(
             ciconnect_api_endpoint
             + "/v1alpha1/groups/"
@@ -570,48 +565,50 @@ def approve_subgroup(group_name, subgroup_name):
 def deny_subgroup(group_name, subgroup_name):
     access_token = get_user_access_token(session)
     query = {"token": access_token}
-    if request.method == "POST":
-        message = request.form["denial-message"]
-        denial_message = {"message": message}
+    message = request.form["denial-message"]
+    denial_message = {"message": message}
 
-        r = requests.delete(
-            ciconnect_api_endpoint
-            + "/v1alpha1/groups/"
-            + group_name
-            + "/subgroup_requests/"
-            + subgroup_name,
-            params=query,
-            json=denial_message,
-        )
+    r = requests.delete(
+        ciconnect_api_endpoint
+        + "/v1alpha1/groups/"
+        + group_name
+        + "/subgroup_requests/"
+        + subgroup_name,
+        params=query,
+        json=denial_message,
+    )
 
-        if r.status_code == requests.codes.ok:
-            flash_message = flash_message_parser("deny_subgroup")
-            flash(flash_message, "success")
-            return redirect(
-                url_for("view_group_subgroups_requests", group_name=group_name)
-            )
-        else:
-            err_message = r.json()["message"]
-            flash("Failed to deny subgroup request: {}".format(err_message), "warning")
-            return redirect(
-                url_for("view_group_subgroups_requests", group_name=group_name)
-            )
+    if r.status_code == requests.codes.ok:
+        flash_message = flash_message_parser("deny_subgroup")
+        flash(flash_message, "success")
+        return redirect(url_for("view_group_subgroups_requests", group_name=group_name))
+    err_message = r.json()["message"]
+    flash("Failed to deny subgroup request: {}".format(err_message), "warning")
+    return redirect(url_for("view_group_subgroups_requests", group_name=group_name))
 
 
 @app.route("/signup", methods=["GET"])
 def signup():
     """Send the user to Globus Auth with signup=1."""
-    domain_name = domain_name_edgecase()
+    domain_name = domain_branding_remap()
 
     with open(
-        brand_dir + "/" + domain_name + "/signup_content/signup_modal.md", "r"
+        brand_dir + "/" + domain_name + "/signup_content/signup_modal.md",
+        "r",
+        encoding="utf-8",
     ) as file:
         signup_modal_md = file.read()
     with open(
-        brand_dir + "/" + domain_name + "/signup_content/signup_instructions.md", "r"
+        brand_dir + "/" + domain_name + "/signup_content/signup_instructions.md",
+        "r",
+        encoding="utf-8",
     ) as file:
         signup_instructions_md = file.read()
-    with open(brand_dir + "/" + domain_name + "/signup_content/signup.md", "r") as file:
+    with open(
+        brand_dir + "/" + domain_name + "/signup_content/signup.md",
+        "r",
+        encoding="utf-8",
+    ) as file:
         signup_md = file.read()
     return render_template(
         "signup.html",
@@ -625,7 +622,7 @@ def signup():
 def aup():
     """Send the user to Acceptable Use Policy page"""
     # Read AUP from markdown dir
-    domain_name = domain_name_edgecase()
+    domain_name = domain_branding_remap()
 
     with open(
         brand_dir + "/" + domain_name + "/signup_content/signup_modal.md", "r"
@@ -633,15 +630,17 @@ def aup():
         aup_md = file.read()
     return render_template("AUP.html", aup_md=aup_md)
 
+
 @app.route("/hardware", methods=["GET"])
 def hardware_information():
     return render_template("hardware.html")
+
 
 @app.route("/about", methods=["GET"])
 def about():
     """Send the user to the About page"""
     # Read About from markdown dir
-    domain_name = domain_name_edgecase()
+    domain_name = domain_branding_remap()
 
     with open(brand_dir + "/" + domain_name + "/about/about.md", "r") as file:
         about = file.read()
@@ -720,9 +719,7 @@ def logout():
         # only where the relevant token is actually present
         if token_info[ty] is not None
     ):
-        client.oauth2_revoke_token(
-            token, additional_params={"token_type_hint": token_type}
-        )
+        client.oauth2_revoke_token(token)
 
     # Destroy the session state
     session.clear()
@@ -802,7 +799,9 @@ def create_profile():
                 },
             }
         try:
-            r = requests.post(ciconnect_api_endpoint + "/v1alpha1/users", params=query, json=post_user)
+            r = requests.post(
+                ciconnect_api_endpoint + "/v1alpha1/users", params=query, json=post_user
+            )
             if r.status_code == requests.codes.ok:
                 r = r.json()["metadata"]
                 session["name"] = r["name"]
@@ -845,9 +844,8 @@ def create_profile():
                 email=email,
                 phone=phone,
                 institution=institution,
-                public_key=public_key
+                public_key=public_key,
             )
-
 
 
 @app.route("/profile/edit/<unix_name>", methods=["GET", "POST"])
@@ -886,7 +884,7 @@ def edit_profile(unix_name):
             create_totp_secret = True
         else:
             create_totp_secret = False
- # Schema and query for adding users to CI Connect DB
+        # Schema and query for adding users to CI Connect DB
         if public_key != " ":
             post_user = {
                 "apiVersion": "v1alpha1",
@@ -941,7 +939,6 @@ def edit_profile(unix_name):
 def profile():
     """User profile information. Assocated with a Globus Auth identity."""
     if request.method == "GET":
-        identity_id = session.get("primary_identity")
         try:
             user = get_user_info(session)
             unix_name = user["metadata"]["unix_name"]
@@ -985,7 +982,7 @@ def profile():
             ):
                 group_memberships.append(group)
 
-        domain_name = domain_name_edgecase()
+        domain_name = domain_branding_remap()
 
         with open(
             brand_dir
@@ -993,6 +990,7 @@ def profile():
             + domain_name
             + "/form_descriptions/group_unix_name_description.md",
             "r",
+            encoding="utf-8",
         ) as file:
             group_unix_name_description = file.read()
 
@@ -1002,8 +1000,9 @@ def profile():
             user_status=user_status,
             group_memberships=group_memberships,
             group_unix_name_description=group_unix_name_description,
-            authenticator_string=authenticator_string
+            authenticator_string=authenticator_string,
         )
+
 
 @app.route("/authcallback", methods=["GET"])
 def authcallback():
@@ -1022,7 +1021,9 @@ def authcallback():
     redirect_uri = url_for("authcallback", _external=True)
 
     client = load_portal_client()
-    client.oauth2_start_flow(redirect_uri, refresh_tokens=True)
+    client.oauth2_start_flow(
+        redirect_uri, refresh_tokens=True, requested_scopes=app.config["USER_SCOPES"]
+    )
 
     # If there's no "code" query string parameter, we're in this route
     # starting a Globus Auth login flow.
@@ -1034,7 +1035,7 @@ def authcallback():
         )
 
         auth_uri = client.oauth2_get_authorize_url(
-            additional_params=additional_authorize_params
+            query_params=additional_authorize_params
         )
         print("ADDITIONAL AUTHORIZED PARAMS: {}".format(additional_authorize_params))
         print("NEXT URL: {}".format(next_url))
@@ -1047,9 +1048,12 @@ def authcallback():
         next_url = get_safe_redirect()
         print("NEXT URL: {}".format(next_url))
         code = request.args.get("code")
+        print(f"Code: {code}")
         tokens = client.oauth2_exchange_code_for_tokens(code)
+        print(f"Tokens: {tokens}")
 
-        id_token = tokens.decode_id_token(client)
+        id_token = tokens.decode_id_token()
+        print(f"ID Token: {id_token}")
         session.update(
             tokens=tokens.by_resource_server,
             is_authenticated=True,
@@ -1061,9 +1065,11 @@ def authcallback():
         )
 
         access_token = session["tokens"]["auth.globus.org"]["access_token"]
+        print(f"Access token: {access_token}")
         token_introspect = client.oauth2_token_introspect(
             token=access_token, include="identity_set"
         )
+        print(f"Token introspect: {token_introspect}")
         identity_set = token_introspect.data["identity_set"]
         profile = None
 
@@ -1174,8 +1180,7 @@ def authcallback():
         # print("FINAL NEXT URL: {}".format(next_url))
         if next_url == "/":
             return redirect(url_for("profile"))
-        else:
-            return redirect(next_url)
+        return redirect(next_url)
 
 
 def admin_check(unix_name):
@@ -1193,6 +1198,7 @@ def admin_check(unix_name):
         + "/groups/"
         + session["url_host"]["unix_name"],
         params=query,
+        timeout=MAX_TIMEOUT,
     )
     user_status = r.json()["membership"]["state"]
     return user_status
