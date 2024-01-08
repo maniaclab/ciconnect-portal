@@ -369,5 +369,5 @@ def domain_branding_remap():
         mapped_domain = app.config["DOMAIN_MAP"][domain_name]
     except KeyError:
         logger.warning("Could not map %s to domain from config", domain_name)
-        mapped_domain = "www.ci-connect.net"
+        mapped_domain = "development"
     return mapped_domain
