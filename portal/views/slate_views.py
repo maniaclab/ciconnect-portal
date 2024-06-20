@@ -18,11 +18,19 @@ import yaml
 from base64 import b64encode
 import random
 
-slate_api_token = app.config["SLATE_API_TOKEN"]
-slate_api_endpoint = app.config["SLATE_API_ENDPOINT"]
+try:
+    slate_api_token = app.config["SLATE_API_TOKEN"]
+except KeyError:
+    slate_api_token = "dummy"
+
+try:
+    slate_api_endpoint = app.config["SLATE_API_ENDPOINT"]
+except KeyError:
+    slate_api_endpoint = "http://localhost:8000"
 query = {"token": slate_api_token}
 
-def generateToken():
+
+def generate_token():
     token_bytes = os.urandom(32)
     b64_encoded = b64encode(token_bytes).decode()
     return b64_encoded
@@ -97,7 +105,6 @@ def view_instances():
 def view_instance(instance_id):
     """View instance details"""
     if request.method == "GET":
-
         instance_details = get_instance_details(instance_id)
         instance_logs = get_instance_logs(instance_id)
         instance_status = True
@@ -128,7 +135,6 @@ def view_instance(instance_id):
 def view_delete_instance(instance_id):
     """View instance details"""
     if request.method == "GET":
-
         deleted_instance_response = delete_instance(instance_id)
         print(deleted_instance_response)
 
@@ -181,30 +187,30 @@ def create_application():
 
         # Generate base64 encoded random 32-bytes token
         logger.info("Generating a token")
-        base64_encoded_token = generateToken()
+        base64_encoded_token = generate_token()
         app_config_yaml["Jupyter"]["Token"] = base64_encoded_token
 
         logger.info("Setting resource values in the YAML file")
         app_config_yaml["Resources"]["Memory"] = 16000
         app_config_yaml["Resources"]["CPU"] = 4000
-        # Set resource values    
-        # try: 
-            # res_memory = int(request.form["memory"]) * 1000
-            # res_memory = max(res_memory, 1000)
-            # res_memory = min(res_memory, 64000)
-            # res_cpu = int(request.form["cpu-cores"]) * 1000
-            # res_cpu = max(res_cpu, 1)
-            # res_cpu = min(res_cpu, 32)
-            # res_gpu = int(request.form["gpu-cores"])
-            # res_gpu = max(res_gpu, 0)
-            # res_gpu = min(res_gpu, 4)
-            # app_config_yaml["Resources"]["Memory"] = res_memory
-            # app_config_yaml["Resources"]["CPU"] = res_gpu
-            # app_config_yaml["Resources"]["GPU"] = res_cpu
+        # Set resource values
+        # try:
+        # res_memory = int(request.form["memory"]) * 1000
+        # res_memory = max(res_memory, 1000)
+        # res_memory = min(res_memory, 64000)
+        # res_cpu = int(request.form["cpu-cores"]) * 1000
+        # res_cpu = max(res_cpu, 1)
+        # res_cpu = min(res_cpu, 32)
+        # res_gpu = int(request.form["gpu-cores"])
+        # res_gpu = max(res_gpu, 0)
+        # res_gpu = min(res_gpu, 4)
+        # app_config_yaml["Resources"]["Memory"] = res_memory
+        # app_config_yaml["Resources"]["CPU"] = res_gpu
+        # app_config_yaml["Resources"]["GPU"] = res_cpu
         # except:
-            # app_config_yaml["Resources"]["Memory"] = 16000
-            # app_config_yaml["Resources"]["CPU"] = 4000
-            # app_config_yaml["Resources"]["GPU"] = 1
+        # app_config_yaml["Resources"]["Memory"] = 16000
+        # app_config_yaml["Resources"]["CPU"] = 4000
+        # app_config_yaml["Resources"]["GPU"] = 1
 
         logger.info("Setting condor values in the YAML file")
         app_config_yaml["CondorConfig"]["Enabled"] = True

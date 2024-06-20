@@ -1,5 +1,5 @@
-from flask import redirect, request, session, url_for
 from functools import wraps
+from flask import redirect, request, session, url_for
 
 
 def authenticated(fn):

@@ -20,7 +20,7 @@ from portal.connect_api import (
     get_user_group_status,
     get_enclosing_group_status,
     update_user_group_status,
-    domain_name_edgecase,
+    domain_branding_remap,
     get_group_members_emails,
 )
 import sys
@@ -56,16 +56,7 @@ def groups():
         # Check user's member status of connect group specifically
         user_status = get_user_connect_status(session["unix_name"], connect_group)
 
-        domain_name = request.headers["Host"]
-
-        if "usatlas" in domain_name:
-            domain_name = "atlas.ci-connect.net"
-        elif "uscms" in domain_name:
-            domain_name = "cms.ci-connect.net"
-        elif "uchicago" in domain_name:
-            domain_name = "psdconnect.uchicago.edu"
-        elif "snowmass21" in domain_name:
-            domain_name = "snowmass21.ci-connect.net"
+        domain_name = domain_branding_remap()
 
         with open(
             brand_dir
@@ -394,16 +385,7 @@ def view_group_subgroups(group_name):
         connect_group = session["url_host"]["unix_name"]
         connect_status = get_user_connect_status(unix_name, connect_group)
 
-        domain_name = request.headers["Host"]
-
-        if "usatlas" in domain_name:
-            domain_name = "atlas.ci-connect.net"
-        elif "uscms" in domain_name:
-            domain_name = "cms.ci-connect.net"
-        elif "uchicago" in domain_name:
-            domain_name = "psdconnect.uchicago.edu"
-        elif "snowmass21" in domain_name:
-            domain_name = "snowmass21.ci-connect.net"
+        domain_name = domain_branding_remap()
 
         with open(
             brand_dir
@@ -509,7 +491,6 @@ def view_group_subgroups_ajax_requests(group_name):
     """List view of group's subgroups requests"""
     query = {"token": ciconnect_api_token}
     if request.method == "GET":
-
         subgroup_requests = requests.get(
             ciconnect_api_endpoint
             + "/v1alpha1/groups/"
@@ -556,7 +537,7 @@ def view_group_email(group_name):
             body_or_html = "text"
 
         # mailgun setup here
-        domain_name = domain_name_edgecase()
+        domain_name = domain_branding_remap()
         support_emails = {
             "cms.ci-connect.net": "cms-connect-support@cern.ch",
             "duke.ci-connect.net": "scsc@duke.edu",
@@ -565,7 +546,7 @@ def view_group_email(group_name):
             "psdconnect.uchicago.edu": "support@ci-connect.uchicago.edu",
             "www.ci-connect.net": "support@ci-connect.net",
             "localhost:5000": "root@localhost.localdomain",
-            "af.uchicago.edu": "noreply@af.uchicago.edu"
+            "af.uchicago.edu": "noreply@af.uchicago.edu",
         }
 
         try:
