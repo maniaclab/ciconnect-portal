@@ -15,6 +15,8 @@
     </h4>
     {% if session.get('is_authenticated') %}
     {% elif 'www.ci-connect.net' in request.host %}
+    {% elif 'connect.usatlas.org' in request.host %}
+    <h2 id="headline"> ATLAS Connect has been retired. Please visit <a href="https://af.uchicago.edu">https://af.uchicago.edu</a></h2>!
     {% elif 'duke.ci-connect.net' in request.host %}
     {% elif 'connect.snowmass21.io' in request.host %}
     {% else %}
