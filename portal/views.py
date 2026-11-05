@@ -123,7 +123,7 @@ def home():
         },
         {
             "name": "CMS",
-            "href": "https://connect.uscms.org",
+            "href": "https://www.ci-connect.net",
             "img": "img/cms-connect-logo.png",
             "description": get_about_markdown("cms.ci-connect.net"),
         },
